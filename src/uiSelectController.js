@@ -267,6 +267,14 @@ uis.controller('uiSelectCtrl',
 
   // When the user selects an item with ENTER or clicks the dropdown
   ctrl.select = function(item, skipFocusser, $event) {
+     // [Custom] omniamedia - customize begin - fix issue entering ',' then 'Enter'
+    for (var i = 0; i < ctrl.taggingTokens.tokens.length; i++) {
+      if (ctrl.taggingTokens.tokens[i] === item.trim()) {
+        return;
+      }
+    }
+    // [Custom] omniamedia - customize end - fix issue entering ',' then 'Enter'
+
     if (item === undefined || !item._uiSelectChoiceDisabled) {
 
       if ( ! ctrl.items && ! ctrl.search ) return;
@@ -434,6 +442,10 @@ uis.controller('uiSelectCtrl',
       case KEY.ESC:
         ctrl.close();
         break;
+      // [Custom] omniamedia - begin customized to skip input ',' KEY.MAP 188
+      case KEY.MAP[188]:
+        break;
+      // [Custom] omniamedia - end workaround to skip input ','   
       default:
         processed = false;
     }
@@ -494,17 +506,24 @@ uis.controller('uiSelectCtrl',
   // If tagging try to split by tokens and add items
   ctrl.searchInput.on('paste', function (e) {
     var data = e.originalEvent.clipboardData.getData('text/plain');
-    if (data && data.length > 0 && ctrl.taggingTokens.isActivated && ctrl.tagging.fct) {
-      var items = data.split(ctrl.taggingTokens.tokens[0]); // split by first token only
-      if (items && items.length > 0) {
-        angular.forEach(items, function (item) {
-          var newItem = ctrl.tagging.fct(item);
-          if (newItem) {
-            ctrl.select(newItem, true);
-          }
-        });
-        e.preventDefault();
-        e.stopPropagation();
+    // [Custom] omniamedia - customize begin - to split by commnas when paste
+    // issue link: https://github.com/angular-ui/ui-select/pull/910
+    if (data && data.length > 0 && ctrl.taggingTokens.isActivated) {
+      var input = data.split(ctrl.taggingTokens.tokens[0]); // split by first token only
+      if (input && input.length > 0) {
+        var value = input[0];
+        var items = value.split(ctrl.taggingTokens.tokens[1]); // split by comma
+        if (items && items.length > 0) {
+          angular.forEach(items, function(item) {
+            // use only non-empty value
+              if (item) {
+                ctrl.select(item, true);
+              }
+              // [Custom] omniamedia - customize end
+            });
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }
     }
   });
